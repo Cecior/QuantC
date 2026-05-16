@@ -3,7 +3,10 @@
 //
 
 #include "QuantumState.h"
-#include "Gates/XGate/XGate.h"
+#include "Gates/OneQubitGates/XGate/XGate.h"
+#include "Gates/OneQubitGates/ZGate/ZGate.h"
+#include "Gates/OneQubitGates/HGate/HGate.h"
+#include "Gates/OneQubitGates/YGate/YGate.h"
 
 int main() {
     int n = 3;
@@ -12,8 +15,8 @@ int main() {
     qs.print_state();
     std::cout << "|φ⟩ amplitude: " << qs.getAmplitude() << std::endl;
 
-    XGate xGate;
-    xGate.apply(qs, 1);
+    YGate gate("X-Gate");
+    gate.apply(qs, 0);
 
     qs.print_state();
     std::cout << "|φ⟩ amplitude: " << qs.getAmplitude() << std::endl;
