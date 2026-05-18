@@ -9,7 +9,7 @@
 #include "Gates/OneQubitGates/HGate/HGate.h"
 #include "Gates/OneQubitGates/YGate/YGate.h"
 
-int benchmark() {
+int main() {
     int n = 3;
     QuantumState qs = QuantumState(n);
 
