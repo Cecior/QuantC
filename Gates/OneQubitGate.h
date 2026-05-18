@@ -11,8 +11,7 @@
 
 class OneQubitGate : public Gate {
 public:
-    OneQubitGate(std::string gateName) : Gate(std::move(gateName)) {}
-    void apply(QuantumState& qs, int target) const override = 0;
+    void apply(QuantumState& qs, size_t target) const override = 0;
 };
 
 

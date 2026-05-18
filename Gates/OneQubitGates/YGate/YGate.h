@@ -10,8 +10,8 @@
 
 class YGate : public OneQubitGate {
 public:
-    YGate(std::string gateName) : OneQubitGate(std::move(gateName)) {}
-    void apply(QuantumState& qs, int target) const override;
+    YGate() { name = "Y"; }
+    void apply(QuantumState& qs, size_t target) const override;
 };
 
 

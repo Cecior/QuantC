@@ -4,7 +4,7 @@
 
 #include "YGate.h"
 
-void YGate::apply(QuantumState &qs, int target) const {
+void YGate::apply(QuantumState &qs, size_t target) const {
     size_t stride = 1ULL << target;
 
     for(size_t block = 0; block < qs.size(); block += stride * 2) {

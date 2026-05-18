@@ -11,16 +11,16 @@
 #include "QuantumState.h"
 
 class Gate {
-private:
+protected:
     std::string name;
 public:
-    Gate(std::string gateName) : name(std::move(gateName)) {}
+    virtual ~Gate() = default;
 
-    virtual void apply(QuantumState& qs, int target) const {
+    virtual void apply(QuantumState& qs, size_t target) const {
         throw std::runtime_error(name + " is not a 1-qubit gate!");
     };
 
-    virtual void apply(QuantumState& qs, int control, int target) const {
+    virtual void apply(QuantumState& qs, size_t control, size_t target) const {
         throw std::runtime_error(name + " is not a 2-qubit gate!");
     };
     

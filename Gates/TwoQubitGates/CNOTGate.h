@@ -7,12 +7,12 @@
 
 
 #include "Gates/TwoQubitGate.h"
-#include <math.h>
+#include <cmath>
 
 class CNOTGate : public TwoQubitGate {
 public:
-    CNOTGate(std::string gateName) : TwoQubitGate(std::move(gateName)) {}
-    void apply(QuantumState& qs, int control, int target) const override;
+    CNOTGate()  { name = "CNOT"; }
+    void apply(QuantumState& qs, size_t control, size_t target) const override;
 };
 
 

@@ -11,8 +11,8 @@
 
 class ZGate : public OneQubitGate{
 public:
-    ZGate(std::string gateName) : OneQubitGate(std::move(gateName)) {}
-    void apply(QuantumState& qs, int target) const override;
+    ZGate() { name = "Z"; }
+    void apply(QuantumState& qs, size_t target) const override;
 };
 
 #endif //QUANTC_ZGATE_H

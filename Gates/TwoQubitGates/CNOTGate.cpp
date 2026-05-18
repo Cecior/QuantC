@@ -4,7 +4,7 @@
 
 #include "CNOTGate.h"
 
-void CNOTGate::apply(QuantumState &qs, int control, int target) const {
+void CNOTGate::apply(QuantumState &qs, size_t control, size_t target) const {
     if(control == target) {
         throw std::runtime_error("Control and Target qubit cannot be the same!");
     }

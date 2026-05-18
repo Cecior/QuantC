@@ -11,8 +11,8 @@
 
 class HGate : public OneQubitGate {
 public:
-    HGate(std::string gateName) : OneQubitGate(std::move(gateName)) {};
-    void apply(QuantumState& qs, int target) const override;
+    HGate() { name = "Hadamard"; };
+    void apply(QuantumState& qs, size_t target) const override;
 };
 
 

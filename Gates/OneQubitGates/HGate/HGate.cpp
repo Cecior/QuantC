@@ -4,7 +4,7 @@
 
 #include "HGate.h"
 
-void HGate::apply(QuantumState &qs, int target) const {
+void HGate::apply(QuantumState &qs, size_t target) const {
     size_t stride = 1ULL << target;
 
     double c = 1.0 / sqrt(2);

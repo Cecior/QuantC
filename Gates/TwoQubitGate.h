@@ -10,8 +10,7 @@
 
 class TwoQubitGate : public Gate {
 public:
-    TwoQubitGate(std::string gateName) : Gate(std::move(gateName)) {}
-    void apply(QuantumState& qs, int control, int target) const override = 0;
+    void apply(QuantumState& qs, size_t control, size_t target) const override = 0;
 };
 
 
