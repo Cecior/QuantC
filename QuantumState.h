@@ -18,11 +18,11 @@ using Complex = std::complex<double>;
 
 class QuantumState {
 private:
-    int numQubits;
+    size_t numQubits;
     std::vector<Complex> state;
 
 public:
-    QuantumState(int n);
+    QuantumState(size_t n) : numQubits(n) {};
 
     size_t size();
     Complex& operator[](size_t idx);
