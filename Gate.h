@@ -20,7 +20,7 @@ public:
         throw std::runtime_error(name + " is not a 1-qubit gate!");
     };
 
-    virtual void apply(QuantumState qs, int control, int target) const {
+    virtual void apply(QuantumState& qs, int control, int target) const {
         throw std::runtime_error(name + " is not a 2-qubit gate!");
     };
     
