@@ -22,7 +22,7 @@ private:
     std::vector<Complex> state;
 
 public:
-    QuantumState(size_t n) : numQubits(n) {};
+    QuantumState(size_t n);
 
     size_t size();
     Complex& operator[](size_t idx);

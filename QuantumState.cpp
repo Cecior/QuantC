@@ -5,9 +5,7 @@
 #include <random>
 #include "QuantumState.h"
 
-QuantumState::QuantumState(int n) {
-    numQubits = n;
-
+QuantumState::QuantumState(size_t n) : numQubits(n) {
     size_t size = 1 << numQubits;
     state.assign(size, Complex(0,0));
     state[0] = Complex(1,0);
