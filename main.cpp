@@ -3,26 +3,14 @@
 //
 
 #include <memory>
+#include "benchmark.h"
 #include "QuantumState.h"
-#include "Gates/OneQubitGates/XGate/XGate.h"
-#include "Gates/OneQubitGates/ZGate/ZGate.h"
-#include "Gates/OneQubitGates/HGate/HGate.h"
-#include "Gates/OneQubitGates/YGate/YGate.h"
+#include "Gates.h"
 
 int main() {
-    int n = 3;
-    QuantumState qs = QuantumState(n);
-
-    qs.print_state();
-    std::cout << "|φ⟩ amplitude: " << qs.getAmplitude() << std::endl;
-
     std::unique_ptr<Gate> gate;
-
-    gate=std::make_unique<XGate>();
-    gate->apply(qs, 0);
-
-    qs.print_state();
-    std::cout << "|φ⟩ amplitude: " << qs.getAmplitude() << std::endl;
+    gate = std::make_unique<ZGate>();
+    benchmark::benchmark_gate(28, *gate, 0, 10);
 
     return 0;
 }
