@@ -11,7 +11,7 @@ void apply_X_AVX(double* data, size_t size, int target) {
 
     if (stride < 4) {
         #pragma omp parallel for schedule(static)
-        for(size_t block = 0; block < size; block += 2 * stride) {
+        for(int64_t block = 0; block < size; block += 2 * stride) {
             for(size_t offset = 0; offset < stride; offset += 2) {
                 size_t idx1 = block ^ offset;
                 size_t idx2 = idx1 ^ stride;
@@ -25,7 +25,7 @@ void apply_X_AVX(double* data, size_t size, int target) {
     }
 
     #pragma omp parallel for schedule(static)
-    for(size_t block = 0; block < size; block += 2 * stride) {
+    for(int64_t block = 0; block < size; block += 2 * stride) {
         for(size_t offset = 0; offset < stride; offset += 4) {
             size_t idx1 = block ^ offset;
             size_t idx2 = idx1 ^ stride;
@@ -43,7 +43,7 @@ void apply_Y_AVX(double* data, size_t size, int target) {
 
     if (stride < 4) {
         #pragma omp parallel for schedule(static)
-        for(size_t block = 0; block < size; block += 2 * stride) {
+        for(int64_t block = 0; block < size; block += 2 * stride) {
             for(size_t offset = 0; offset < stride; offset += 2) {
                 size_t idx1 = block | offset;
                 size_t idx2 = idx1 | stride;
@@ -62,7 +62,7 @@ void apply_Y_AVX(double* data, size_t size, int target) {
     __m256d sign_V2 = _mm256_setr_pd(1.0, -1.0, 1.0, -1.0);
 
     #pragma omp parallel for schedule(static)
-    for (size_t block = 0; block < size; block += 2 * stride) {
+    for (int64_t block = 0; block < size; block += 2 * stride) {
         for(size_t offset = 0; offset < stride; offset += 4) {
             size_t idx1 = block | offset;
             size_t idx2 = idx1 | stride;
@@ -86,7 +86,7 @@ void apply_Z_AVX(double* data, size_t size, int target) {
 
     if (stride < 4) {
         #pragma omp parallel for schedule(static)
-        for(size_t block = 0; block < size; block += 2 * stride) {
+        for(int64_t block = 0; block < size; block += 2 * stride) {
             size_t base = block | stride;
             for(size_t offset = 0; offset < stride; offset += 2) {
                 size_t idx = base | offset;
@@ -99,13 +99,13 @@ void apply_Z_AVX(double* data, size_t size, int target) {
     __m256d neg_ones = _mm256_set1_pd(-1.0);
 
     #pragma omp parallel for schedule(static)
-    for (size_t block = 0; block < size; block += 2 * stride) {
+    for (int64_t block = 0; block < size; block += 2 * stride) {
         size_t base = block | stride;
         for(size_t offset = 0; offset < stride; offset += 4) {
             size_t idx = base | offset;
             __m256d vec = _mm256_load_pd(&data[idx]);
             vec = _mm256_mul_pd(vec, neg_ones);
-            _mm256_stream_pd(&data[idx], -vec);
+            _mm256_stream_pd(&data[idx], vec);
         }
     }
 }

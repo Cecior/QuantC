@@ -18,7 +18,14 @@ if(OpenMP_CXX_FOUND)
     target_link_libraries(QuantC PUBLIC OpenMP::OpenMP_CXX)
 endif()
 
-target_compile_options(QuantC PRIVATE
+if(MSVC)
+    target_compile_options(QuantC PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>: /O2 /arch:AVX2 /fp:fast /Zi>
+        $<$<COMPILE_LANGUAGE:CUDA>: -O3 --use_fast_math -lineinfo>
+    )
+else()
+    target_compile_options(QuantC PRIVATE
         $<$<COMPILE_LANGUAGE:CXX>: -O3 -march=native -ffast-math -flto -mavx2 -g>
         $<$<COMPILE_LANGUAGE:CUDA>: -O3 --use_fast_math -lineinfo>
-)
+    )
+endif()

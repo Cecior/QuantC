@@ -18,7 +18,12 @@
 double* aligned_state_vector(int nq) {
     size_t n_elem = 1ULL << (nq + 1);
     size_t size_in_bytes = n_elem * sizeof(double);
-    double* data = static_cast<double*>(aligned_alloc(32, size_in_bytes));
+
+    #ifdef _MSC_VER
+        double* data = static_cast<double*>(_aligned_malloc(size_in_bytes, 32));
+    #else
+        double* data = static_cast<double*>(aligned_alloc(32, size_in_bytes));
+    #endif
 
     for (int i = 0; i < n_elem; i++) {
         data[i] = 0.0;
@@ -42,7 +47,11 @@ void benchmark_cpu(int num_qubit, int iter) {
         std::chrono::duration<double> duration = end - start;
         double time = duration.count() / iter;
 
-        free(qs);
+        #ifdef _MSC_VER
+            _aligned_free(qs);
+        #else
+            free(qs);
+        #endif
         std::cout << "Avg time: " << time * 1000 << " ms" << std::endl;
     }
 }
@@ -142,12 +151,17 @@ void benchmark_gpu(int num_qubit, int iter) {
     }
 
     CHECK_CUDA(cudaFree(d_qs));
-    free(h_qs);
+
+    #ifdef _MSC_VER
+        _aligned_free(h_qs);
+    #else
+        free(h_qs);
+    #endif
 }
 
 int main() {
     int n = 5;
-    int nq = 27;
+    int nq = 28;
 
     benchmark_cpu(nq, n);
     return 0;
