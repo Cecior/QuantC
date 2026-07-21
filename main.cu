@@ -6,6 +6,12 @@
 #include <iostream>
 #include <chrono>
 
+static bool g_verbose = false;
+static bool g_target_cpu = false;
+static volatile double g_sink = 0.0;
+
+#define LOG if(g_verbose) std::cout
+
 #define CHECK_CUDA(Call) { \
     cudaError_t err = Call; \
     if (err != cudaSuccess) { \
@@ -14,6 +20,35 @@
     } \
 } \
 
+
+static double* aligned_state_vector(int nq);
+static __global__ void apply_X_kernel(double* data, size_t num_states, int target);
+static __global__ void apply_Y_kernel(double* data, size_t num_states, int target);
+static __global__ void apply_Z_kernel(double* data, size_t num_states, int target);
+static __global__ void apply_H_kernel(double* data, size_t num_states, int target);
+
+static void benchmark_cpu(int num_qubit, int iter);
+static void benchmark_gpu(int num_qubit, int iter);
+
+int main(int argc, char* argv[]) {
+    int iter = 5;
+    int num_qubit = 27;
+
+    for (int i = 1; i < argc; i++) {
+        if (std::string(argv[i]) == "-verbose") g_verbose = true;
+        if (std::string(argv[i]) == "-num_qubit" && i < argc - 1) num_qubit = atoi(argv[++i]);
+        if (std::string(argv[i]) == "-iter" && i < argc - 1) iter = atoi(argv[++i]);
+        if (std::string(argv[i]) == "-cpu") g_target_cpu = true;
+        if (std::string(argv[i]) == "-gpu") g_target_cpu = false;
+    }
+
+    if (g_target_cpu)
+        benchmark_cpu(num_qubit, iter);
+    else
+        benchmark_gpu(num_qubit, iter);
+
+    return 0;
+}
 
 double* aligned_state_vector(int nq) {
     size_t n_elem = 1ULL << (nq + 1);
@@ -32,33 +67,9 @@ double* aligned_state_vector(int nq) {
 
     return data;
 }
-void benchmark_cpu(int num_qubit, int iter) {
-    size_t n_elem = 1ULL << (num_qubit + 1);
-    
-    for(int target = 0; target < num_qubit; target++) {
-        std::cout << "Qubit #" << target << std::endl;
-        double* qs = aligned_state_vector(num_qubit);
-
-        auto start = std::chrono::high_resolution_clock::now();
-        for(int i = 0; i < iter; i++) {
-            apply_Y_AVX(qs, n_elem, target);
-        }
-        auto end = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> duration = end - start;
-        double time = duration.count() / iter;
-
-        #ifdef _MSC_VER
-            _aligned_free(qs);
-        #else
-            free(qs);
-        #endif
-        std::cout << "Avg time: " << time * 1000 << " ms" << std::endl;
-    }
-}
-
 __global__ void apply_X_kernel(double* data, size_t num_states, int target) {
     size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid > num_states / 2) return;
+    if (tid >= num_states / 2) return;
 
     double2* c_data = reinterpret_cast<double2*>(data);
 
@@ -73,10 +84,9 @@ __global__ void apply_X_kernel(double* data, size_t num_states, int target) {
     c_data[idx1] = c_data[idx2];
     c_data[idx2] = temp;
 }
-
 __global__ void apply_Y_kernel(double* data, size_t num_states, int target) {
     size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid > num_states / 2) return;
+    if (tid >= num_states / 2) return;
 
     double2* c_data = reinterpret_cast<double2*>(data);
 
@@ -99,10 +109,9 @@ __global__ void apply_Y_kernel(double* data, size_t num_states, int target) {
     c_data[idx2].x = i1;
     c_data[idx2].y = -r1;
 }
-
 __global__ void apply_Z_kernel(double* data, size_t num_states, int target) {
     size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid > num_states / 2) return;
+    if (tid >= num_states / 2) return;
 
     double2* c_data = reinterpret_cast<double2*>(data);
 
@@ -114,14 +123,59 @@ __global__ void apply_Z_kernel(double* data, size_t num_states, int target) {
     c_data[idx].x = -c_data[idx].x;
     c_data[idx].y = -c_data[idx].y;
 }
+__global__ void apply_H_kernel(double* data, size_t num_states, int target) {
+    size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= num_states / 2) return;
 
+    double2* c_data = reinterpret_cast<double2*>(data);
+
+    size_t stride = 1ULL << target;
+    size_t block = tid / stride;
+    size_t offset = tid % stride;
+
+    size_t idx1 = (block * 2 * stride) + offset;
+    size_t idx2 = idx1 + stride;
+
+    double2 val1 = c_data[idx1];
+    double2 val2 = c_data[idx2];
+
+    c_data[idx1].x = (val1.x + val2.x) * M_SQRT1_2;
+    c_data[idx1].y = (val1.y + val2.y) * M_SQRT1_2;
+    c_data[idx2].x = (val1.x - val2.x) * M_SQRT1_2;
+    c_data[idx2].y = (val1.y - val2.y) * M_SQRT1_2;
+}
+void benchmark_cpu(int num_qubit, int iter) {
+    size_t num_states = 1ULL << num_qubit;
+    size_t size = 2 * num_states;
+    double* qs = aligned_state_vector(num_qubit);
+
+    for(int target = 0; target < num_qubit; target++) {
+        LOG << "Qubit #" << target << std::endl;
+
+        auto start = std::chrono::high_resolution_clock::now();
+        for(int i = 0; i < iter; i++) {
+            apply_H_AVX(qs, size, target);
+        }
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration = end - start;
+        double time = duration.count() / iter;
+
+        g_sink += qs[num_states / 2];
+
+        LOG << "Avg time: " << time * 1000 << " ms" << std::endl;
+    }
+    #ifdef _MSC_VER
+        _aligned_free(qs);
+    #else
+        free(qs);
+    #endif
+}
 void benchmark_gpu(int num_qubit, int iter) {
-
     size_t num_states = 1ULL << num_qubit;
     size_t size_in_bytes = num_states * 2 * sizeof(double);
 
     // CPU Allocation
-    double* h_qs = (double*)malloc(size_in_bytes);
+    double* h_qs = aligned_state_vector(num_qubit);
     memset(h_qs, 0, size_in_bytes);
     h_qs[0] = 1.0;
 
@@ -135,19 +189,19 @@ void benchmark_gpu(int num_qubit, int iter) {
     int blocks = (total_swaps + threads_per_block - 1) / threads_per_block;
 
     for (int target = 0; target < num_qubit; target++) {
-        std::cout << "Qubit #" << target << ": " << std::endl;
+        LOG << "Qubit #" << target << ": " << std::endl;
 
         auto start = std::chrono::high_resolution_clock::now();
         for (int i = 0; i < iter; i++) {
-            apply_Y_kernel<<<blocks, threads_per_block>>>(d_qs, num_states, target);
+            apply_H_kernel<<<blocks, threads_per_block>>>(d_qs, num_states, target);
             CHECK_CUDA(cudaGetLastError());
-            CHECK_CUDA(cudaDeviceSynchronize());
         }
+        CHECK_CUDA(cudaDeviceSynchronize());
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> duration = end - start;
         double time = duration.count() / iter;
 
-        std::cout << "Avg time: " << time << " ms" << std::endl;
+        LOG << "Avg time: " << time << " ms" << std::endl;
     }
 
     CHECK_CUDA(cudaFree(d_qs));
@@ -157,12 +211,4 @@ void benchmark_gpu(int num_qubit, int iter) {
     #else
         free(h_qs);
     #endif
-}
-
-int main() {
-    int n = 5;
-    int nq = 28;
-
-    benchmark_cpu(nq, n);
-    return 0;
 }

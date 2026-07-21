@@ -11,5 +11,6 @@
 void apply_X_AVX(double* data, size_t size, int target);
 void apply_Y_AVX(double* data, size_t size, int target);
 void apply_Z_AVX(double* data, size_t size, int target);
+void apply_H_AVX(double* data, size_t size, int target);
 
 #endif //QUANTC_KERNEL_CPU_H

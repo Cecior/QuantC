@@ -3,6 +3,8 @@
 //
 
 #include "kernel_cpu.h"
+
+#include <complex>
 #include <memory>
 #include <immintrin.h>
 
@@ -106,6 +108,53 @@ void apply_Z_AVX(double* data, size_t size, int target) {
             __m256d vec = _mm256_load_pd(&data[idx]);
             vec = _mm256_mul_pd(vec, neg_ones);
             _mm256_stream_pd(&data[idx], vec);
+        }
+    }
+}
+void apply_H_AVX(double* data, size_t size, int target) {
+    size_t stride = 1ULL << (target + 1);
+    double coef = 1 / std::sqrt(2);
+
+    if (stride < 4) {
+        #pragma omp parallel for schedule(static)
+        for (int64_t block = 0; block < size; block += 2 * stride) {
+            for (size_t offset = 0; offset < stride; offset += 2) {
+                size_t idx1 = block | offset;
+                size_t idx2 = idx1 | stride;
+
+                double r1 = data[idx1];
+                double i1 = data[idx1 + 1];
+                double r2 = data[idx2];
+                double i2 = data[idx2 + 1];
+
+                data[idx1] = (r1 + r2) * coef;
+                data[idx1 + 1] = (i1 + i2) * coef;
+
+                data[idx2] = (r1 - r2) * coef;
+                data[idx2 + 1] = (i1 - i2) * coef;
+            }
+        }
+        return;
+    }
+
+    __m256d coef_v = _mm256_set1_pd(coef);
+    #pragma omp parallel for schedule(static)
+    for (int64_t block = 0; block < size; block += 2 * stride) {
+        for (size_t offset = 0; offset < stride; offset += 4) {
+            size_t idx1 = block | offset;
+            size_t idx2 = idx1 | stride;
+
+            __m256d vec1 = _mm256_load_pd(&data[idx1]);
+            __m256d vec2 = _mm256_load_pd(&data[idx2]);
+
+            __m256d contrib1 = _mm256_mul_pd(vec1, coef_v);
+            __m256d contrib2 = _mm256_mul_pd(vec2, coef_v);
+
+            vec1 = _mm256_add_pd(contrib1, contrib2);
+            vec2 = _mm256_sub_pd(contrib1, contrib2);
+
+            _mm256_stream_pd(&data[idx1], vec1);
+            _mm256_stream_pd(&data[idx2], vec2);
         }
     }
 }
