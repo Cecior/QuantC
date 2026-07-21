@@ -25,23 +25,27 @@ typedef void (*GpuGateFunction)(double*, size_t, int, int, int);
 
 static double* aligned_state_vector(int nq);
 
-static void benchmark_cpu(int num_qubit, int iter, CpuGateFunction gate, const std::string name);
-static void benchmark_gpu(int num_qubit, int iter, GpuGateFunction gate, const std::string name);
+static void benchmark_cpu(int num_qubit, int iter, CpuGateFunction gate, const std::string name, std::string str_target);
+static void benchmark_gpu(int num_qubit, int iter, GpuGateFunction gate, const std::string name, std::string str_target);
 
 int main(int argc, char* argv[]) {
     int iter = 5;
     int num_qubit = 27;
 
+    std::string target;
     std::string impl = "avx";
     CpuGateFunction cpuGate = &apply_H_AVX;
     GpuGateFunction gpuGate = &launch_apply_H;
 
     for (int i = 1; i < argc; i++) {
         if (std::string(argv[i]) == "--verbose") g_verbose = true;
-        if (std::string(argv[i]) == "--num_qubit" && i < argc - 1) num_qubit = atoi(argv[++i]);
-        if (std::string(argv[i]) == "--iter" && i < argc - 1) iter = atoi(argv[++i]);
+        if (std::string(argv[i]) == "--num_qubit" && i < argc - 1) num_qubit = std::stoi(argv[++i]);
+        if (std::string(argv[i]) == "--iter" && i < argc - 1) iter = std::stoi(argv[++i]);
         if (std::string(argv[i]) == "--impl" && i < argc - 1) impl = std::string(argv[++i]);
+        if (std::string(argv[i]) == "--target" && i < argc - 1) target = std::string(argv[++i]);
     }
+
+    if (std::stoi(target) < 0 || std::stoi(target) >= num_qubit) target = "all";
 
     if (impl == "raw") cpuGate = &apply_H_raw;
     else if (impl == "omp") cpuGate = &apply_H_omp;
@@ -50,9 +54,9 @@ int main(int argc, char* argv[]) {
     std::string str_name = "H - " + impl;
 
     if (impl == "cuda")
-        benchmark_gpu(num_qubit, iter, gpuGate, str_name);
+        benchmark_gpu(num_qubit, iter, gpuGate, str_name, target);
     else
-        benchmark_cpu(num_qubit, iter, cpuGate, str_name);
+        benchmark_cpu(num_qubit, iter, cpuGate, str_name, target);
 
     return 0;
 }
@@ -74,22 +78,25 @@ double* aligned_state_vector(int nq) {
 
     return data;
 }
-void benchmark_cpu(int num_qubit, int iter, CpuGateFunction gate, const std::string name) {
+void benchmark_cpu(int num_qubit, int iter, CpuGateFunction gate, const std::string name, std::string str_target) {
     size_t num_states = 1ULL << num_qubit;
     size_t size = 2 * num_states;
     double* qs = aligned_state_vector(num_qubit);
 
     LOG << "Benchmarking Gate " << name << " on " << num_qubit << " qubits" << std::endl;
 
-    for(int target = 0; target < num_qubit; target++) {
+    int begin = (str_target == "all") ? 0 : std::stoi(str_target);
+    int end = (str_target == "all") ? num_qubit : std::stoi(str_target) + 1;
+
+    for(int target = begin; target < end; target++) {
         LOG << "Qubit #" << target << std::endl;
 
-        auto start = std::chrono::high_resolution_clock::now();
+        auto t_start = std::chrono::high_resolution_clock::now();
         for(int i = 0; i < iter; i++) {
             gate(qs, size, target);
         }
-        auto end = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> duration = end - start;
+        auto t_end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration = t_end - t_start;
         double time = duration.count() / iter;
 
         g_sink += qs[num_states / 2];
@@ -102,7 +109,7 @@ void benchmark_cpu(int num_qubit, int iter, CpuGateFunction gate, const std::str
         free(qs);
     #endif
 }
-void benchmark_gpu(int num_qubit, int iter, GpuGateFunction gate, const std::string name) {
+void benchmark_gpu(int num_qubit, int iter, GpuGateFunction gate, const std::string name, std::string str_target) {
     size_t num_states = 1ULL << num_qubit;
     size_t size_in_bytes = num_states * 2 * sizeof(double);
 
@@ -122,17 +129,20 @@ void benchmark_gpu(int num_qubit, int iter, GpuGateFunction gate, const std::str
 
     LOG << "Benchmarking Gate " << name << " on " << num_qubit << " qubits" << std::endl;
 
-    for (int target = 0; target < num_qubit; target++) {
+    int begin = (str_target == "all") ? 0 : std::stoi(str_target);
+    int end = (str_target == "all") ? num_qubit : std::stoi(str_target) + 1;
+
+    for (int target = begin; target < end; target++) {
         LOG << "Qubit #" << target << ": " << std::endl;
 
-        auto start = std::chrono::high_resolution_clock::now();
+        auto t_start = std::chrono::high_resolution_clock::now();
         for (int i = 0; i < iter; i++) {
             gate(d_qs, num_states, target, blocks, threads_per_block);
             CHECK_CUDA(cudaGetLastError());
         }
         CHECK_CUDA(cudaDeviceSynchronize());
-        auto end = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> duration = end - start;
+        auto t_end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> duration = t_end - t_start;
         double time = duration.count() / iter;
 
         LOG << "Avg time: " << time << " ms" << std::endl;
