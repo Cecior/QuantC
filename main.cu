@@ -3,11 +3,11 @@
 //
 
 #include "kernel_cpu.h"
+#include "kernel_gpu.cuh"
 #include <iostream>
 #include <chrono>
 
 static bool g_verbose = false;
-static bool g_target_cpu = false;
 static volatile double g_sink = 0.0;
 
 #define LOG if(g_verbose) std::cout
@@ -20,32 +20,39 @@ static volatile double g_sink = 0.0;
     } \
 } \
 
+typedef void (*CpuGateFunction)(double*, size_t, int);
+typedef void (*GpuGateFunction)(double*, size_t, int, int, int);
 
 static double* aligned_state_vector(int nq);
-static __global__ void apply_X_kernel(double* data, size_t num_states, int target);
-static __global__ void apply_Y_kernel(double* data, size_t num_states, int target);
-static __global__ void apply_Z_kernel(double* data, size_t num_states, int target);
-static __global__ void apply_H_kernel(double* data, size_t num_states, int target);
 
-static void benchmark_cpu(int num_qubit, int iter);
-static void benchmark_gpu(int num_qubit, int iter);
+static void benchmark_cpu(int num_qubit, int iter, CpuGateFunction gate, const std::string name);
+static void benchmark_gpu(int num_qubit, int iter, GpuGateFunction gate, const std::string name);
 
 int main(int argc, char* argv[]) {
     int iter = 5;
     int num_qubit = 27;
 
+    std::string impl = "avx";
+    CpuGateFunction cpuGate = &apply_H_AVX;
+    GpuGateFunction gpuGate = &launch_apply_H;
+
     for (int i = 1; i < argc; i++) {
-        if (std::string(argv[i]) == "-verbose") g_verbose = true;
-        if (std::string(argv[i]) == "-num_qubit" && i < argc - 1) num_qubit = atoi(argv[++i]);
-        if (std::string(argv[i]) == "-iter" && i < argc - 1) iter = atoi(argv[++i]);
-        if (std::string(argv[i]) == "-cpu") g_target_cpu = true;
-        if (std::string(argv[i]) == "-gpu") g_target_cpu = false;
+        if (std::string(argv[i]) == "--verbose") g_verbose = true;
+        if (std::string(argv[i]) == "--num_qubit" && i < argc - 1) num_qubit = atoi(argv[++i]);
+        if (std::string(argv[i]) == "--iter" && i < argc - 1) iter = atoi(argv[++i]);
+        if (std::string(argv[i]) == "--impl" && i < argc - 1) impl = std::string(argv[++i]);
     }
 
-    if (g_target_cpu)
-        benchmark_cpu(num_qubit, iter);
+    if (impl == "raw") cpuGate = &apply_H_raw;
+    else if (impl == "omp") cpuGate = &apply_H_omp;
+    else if (impl == "avx") cpuGate = &apply_H_AVX;
+
+    std::string str_name = "H - " + impl;
+
+    if (impl == "cuda")
+        benchmark_gpu(num_qubit, iter, gpuGate, str_name);
     else
-        benchmark_gpu(num_qubit, iter);
+        benchmark_cpu(num_qubit, iter, cpuGate, str_name);
 
     return 0;
 }
@@ -67,94 +74,19 @@ double* aligned_state_vector(int nq) {
 
     return data;
 }
-__global__ void apply_X_kernel(double* data, size_t num_states, int target) {
-    size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= num_states / 2) return;
-
-    double2* c_data = reinterpret_cast<double2*>(data);
-
-    size_t stride = 1ULL << target;
-    size_t block = tid / stride;
-    size_t offset = tid % stride;
-
-    size_t idx1 = (block * 2 * stride) + offset;
-    size_t idx2 = idx1 + stride;
-
-    double2 temp = c_data[idx1];
-    c_data[idx1] = c_data[idx2];
-    c_data[idx2] = temp;
-}
-__global__ void apply_Y_kernel(double* data, size_t num_states, int target) {
-    size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= num_states / 2) return;
-
-    double2* c_data = reinterpret_cast<double2*>(data);
-
-    size_t stride = 1ULL << target;
-    size_t block = tid / stride;
-    size_t offset = tid % stride;
-
-    size_t idx1 = (block * 2 * stride) + offset;
-    size_t idx2 = idx1 + stride;
-
-    double r1 = c_data[idx1].x;
-    double i1 = c_data[idx1].y;
-
-    double r2 = c_data[idx2].x;
-    double i2 = c_data[idx2].y;
-
-    c_data[idx1].x = -i2;
-    c_data[idx1].y = r2;
-
-    c_data[idx2].x = i1;
-    c_data[idx2].y = -r1;
-}
-__global__ void apply_Z_kernel(double* data, size_t num_states, int target) {
-    size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= num_states / 2) return;
-
-    double2* c_data = reinterpret_cast<double2*>(data);
-
-    size_t stride = 1ULL << target;
-    size_t block = tid / stride;
-    size_t offset = tid % stride;
-
-    size_t idx = (block * 2 * stride) + offset + stride;
-    c_data[idx].x = -c_data[idx].x;
-    c_data[idx].y = -c_data[idx].y;
-}
-__global__ void apply_H_kernel(double* data, size_t num_states, int target) {
-    size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= num_states / 2) return;
-
-    double2* c_data = reinterpret_cast<double2*>(data);
-
-    size_t stride = 1ULL << target;
-    size_t block = tid / stride;
-    size_t offset = tid % stride;
-
-    size_t idx1 = (block * 2 * stride) + offset;
-    size_t idx2 = idx1 + stride;
-
-    double2 val1 = c_data[idx1];
-    double2 val2 = c_data[idx2];
-
-    c_data[idx1].x = (val1.x + val2.x) * M_SQRT1_2;
-    c_data[idx1].y = (val1.y + val2.y) * M_SQRT1_2;
-    c_data[idx2].x = (val1.x - val2.x) * M_SQRT1_2;
-    c_data[idx2].y = (val1.y - val2.y) * M_SQRT1_2;
-}
-void benchmark_cpu(int num_qubit, int iter) {
+void benchmark_cpu(int num_qubit, int iter, CpuGateFunction gate, const std::string name) {
     size_t num_states = 1ULL << num_qubit;
     size_t size = 2 * num_states;
     double* qs = aligned_state_vector(num_qubit);
+
+    LOG << "Benchmarking Gate " << name << " on " << num_qubit << " qubits" << std::endl;
 
     for(int target = 0; target < num_qubit; target++) {
         LOG << "Qubit #" << target << std::endl;
 
         auto start = std::chrono::high_resolution_clock::now();
         for(int i = 0; i < iter; i++) {
-            apply_H_AVX(qs, size, target);
+            gate(qs, size, target);
         }
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> duration = end - start;
@@ -170,7 +102,7 @@ void benchmark_cpu(int num_qubit, int iter) {
         free(qs);
     #endif
 }
-void benchmark_gpu(int num_qubit, int iter) {
+void benchmark_gpu(int num_qubit, int iter, GpuGateFunction gate, const std::string name) {
     size_t num_states = 1ULL << num_qubit;
     size_t size_in_bytes = num_states * 2 * sizeof(double);
 
@@ -188,12 +120,14 @@ void benchmark_gpu(int num_qubit, int iter) {
     int threads_per_block = 256;
     int blocks = (total_swaps + threads_per_block - 1) / threads_per_block;
 
+    LOG << "Benchmarking Gate " << name << " on " << num_qubit << " qubits" << std::endl;
+
     for (int target = 0; target < num_qubit; target++) {
         LOG << "Qubit #" << target << ": " << std::endl;
 
         auto start = std::chrono::high_resolution_clock::now();
         for (int i = 0; i < iter; i++) {
-            apply_H_kernel<<<blocks, threads_per_block>>>(d_qs, num_states, target);
+            gate(d_qs, num_states, target, blocks, threads_per_block);
             CHECK_CUDA(cudaGetLastError());
         }
         CHECK_CUDA(cudaDeviceSynchronize());

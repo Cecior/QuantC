@@ -4,9 +4,10 @@
 
 #include "kernel_cpu.h"
 
-#include <complex>
 #include <memory>
 #include <immintrin.h>
+
+double sqrt1_2 = 0.70710678118654752440;
 
 void apply_X_AVX(double* data, size_t size, int target) {
     size_t stride = 1ULL << (target + 1);
@@ -111,9 +112,50 @@ void apply_Z_AVX(double* data, size_t size, int target) {
         }
     }
 }
+
+void apply_H_raw(double* data, size_t size, int target) {
+    size_t stride = 1ULL << (target + 1);
+
+    for (size_t block = 0; block < size; block += 2 * stride) {
+        for (size_t offset = 0; offset < stride; offset += 2) {
+            size_t idx1 = block | offset;
+            size_t idx2 = idx1 | stride;
+
+            double r1 = data[idx1];
+            double i1 = data[idx1 + 1];
+            double r2 = data[idx2];
+            double i2 = data[idx2 + 1];
+
+            data[idx1] = (r1 + r2) * sqrt1_2;
+            data[idx1 + 1] = (i1 + i2) * sqrt1_2;
+            data[idx2] = (r1 - r2) * sqrt1_2;
+            data[idx2 + 1] = (i1 - i2) * sqrt1_2;
+        }
+    }
+}
+void apply_H_omp(double* data, size_t size, int target) {
+    size_t stride = 1ULL << (target + 1);
+
+    #pragma omp parallel for schedule(static)
+    for (int64_t block = 0; block < size; block += 2 * stride) {
+        for (size_t offset = 0; offset < stride; offset += 2) {
+            size_t idx1 = block | offset;
+            size_t idx2 = idx1 | stride;
+
+            double r1 = data[idx1];
+            double i1 = data[idx1 + 1];
+            double r2 = data[idx2];
+            double i2 = data[idx2 + 1];
+
+            data[idx1] = (r1 + r2) * sqrt1_2;
+            data[idx1 + 1] = (i1 + i2) * sqrt1_2;
+            data[idx2] = (r1 - r2) * sqrt1_2;
+            data[idx2 + 1] = (i1 - i2) * sqrt1_2;
+        }
+    }
+}
 void apply_H_AVX(double* data, size_t size, int target) {
     size_t stride = 1ULL << (target + 1);
-    double coef = 1 / std::sqrt(2);
 
     if (stride < 4) {
         #pragma omp parallel for schedule(static)
@@ -127,17 +169,17 @@ void apply_H_AVX(double* data, size_t size, int target) {
                 double r2 = data[idx2];
                 double i2 = data[idx2 + 1];
 
-                data[idx1] = (r1 + r2) * coef;
-                data[idx1 + 1] = (i1 + i2) * coef;
+                data[idx1] = (r1 + r2) * sqrt1_2;
+                data[idx1 + 1] = (i1 + i2) * sqrt1_2;
 
-                data[idx2] = (r1 - r2) * coef;
-                data[idx2 + 1] = (i1 - i2) * coef;
+                data[idx2] = (r1 - r2) * sqrt1_2;
+                data[idx2 + 1] = (i1 - i2) * sqrt1_2;
             }
         }
         return;
     }
 
-    __m256d coef_v = _mm256_set1_pd(coef);
+    __m256d coef_v = _mm256_set1_pd(sqrt1_2);
     #pragma omp parallel for schedule(static)
     for (int64_t block = 0; block < size; block += 2 * stride) {
         for (size_t offset = 0; offset < stride; offset += 4) {
