@@ -1,3 +1,0 @@
-Qubits: 27
-Iterations: 50
-Hardware: R9 5900X - RTX 3050 Mobile
