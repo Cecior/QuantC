@@ -1,0 +1,12 @@
+{
+  "config": {
+    "qubits": 27,
+    "iterations": 50,
+    "hardware": {
+      "cpu": "Intel i5-12500H",
+      "gpu": "RTX 3050 Mobile",
+      "ram_speed": "3200 MT/s",
+      "ram_bus_width": "64 bit"
+    }
+  }
+}

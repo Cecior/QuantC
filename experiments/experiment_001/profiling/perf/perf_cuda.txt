@@ -1,0 +1,39 @@
+# started on Sun Jul 26 15:55:47 2026
+
+
+ Performance counter stats for './QuantC --impl cuda':
+
+               232      context-switches                 #     37.7 cs/sec  cs_per_second     
+                20      cpu-migrations                   #      3.3 migrations/sec  migrations_per_second
+           528,368      page-faults                      #  85887.9 faults/sec  page_faults_per_second
+          6,151.83 msec task-clock                       #      0.8 CPUs  CPUs_utilized       
+        13,384,258      cpu_core/L1-dcache-load-misses/  #      nan %  l1d_miss_rate            (30.71%)
+     <not counted>      cpu_core/L1-icache-load-misses/  #      nan %  l1i_miss_rate          
+        14,484,321      cpu_core/LLC-loads/              #     94.2 %  llc_miss_rate            (15.38%)
+         2,772,135      cpu_core/branch-misses/          #      0.0 %  branch_miss_rate         (23.08%)
+    10,347,064,008      cpu_core/branches/               #   1681.9 M/sec  branch_frequency     (30.76%)
+    26,780,280,218      cpu_core/cpu-cycles/             #      4.4 GHz  cycles_frequency       (38.46%)
+    55,231,559,597      cpu_core/instructions/           #      2.1 instructions  insn_per_cycle  (46.13%)
+    17,190,865,233      cpu_core/dTLB-loads/             #      0.0 %  dtlb_miss_rate           (46.07%)
+       614,360,819      cpu_atom/L1-icache-load-misses/  #     16.2 %  l1i_miss_rate            (0.00%)
+        27,134,680      cpu_atom/LLC-loads/              #      8.9 %  llc_miss_rate            (0.02%)
+        60,335,069      cpu_atom/branch-misses/          #      1.8 %  branch_miss_rate         (0.04%)
+     3,348,864,100      cpu_atom/branches/               #    544.4 M/sec  branch_frequency     (0.05%)
+    20,103,775,237      cpu_atom/cpu-cycles/             #      3.3 GHz  cycles_frequency       (0.07%)
+    17,012,309,396      cpu_atom/instructions/           #      0.8 instructions  insn_per_cycle  (0.06%)
+     4,241,264,285      cpu_atom/dTLB-loads/             #      0.1 %  dtlb_miss_rate           (0.08%)
+             TopdownL1 (cpu_core)                        #      3.6 %  tma_bad_speculation    
+                                                         #     24.7 %  tma_frontend_bound       (61.40%)
+                                                         #     51.4 %  tma_backend_bound      
+                                                         #     20.4 %  tma_retiring             (61.40%)
+             TopdownL1 (cpu_atom)                        #     40.3 %  tma_backend_bound        (0.09%)
+                                                         #     23.4 %  tma_frontend_bound       (0.08%)
+                                                         #     18.8 %  tma_bad_speculation    
+                                                         #     17.5 %  tma_retiring             (0.06%)
+
+       7.266686536 seconds time elapsed
+
+       4.728727000 seconds user
+       1.490860000 seconds sys
+
+

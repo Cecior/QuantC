@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     int iter = 5;
     int num_qubit = 27;
 
-    std::string target;
+    std::string target = "all";
     std::string impl = "avx";
     CpuGateFunction cpuGate = &apply_H_AVX;
     GpuGateFunction gpuGate = &launch_apply_H;

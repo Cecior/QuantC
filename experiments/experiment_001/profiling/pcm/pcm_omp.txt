@@ -1,0 +1,49 @@
+ UTIL  : utilization (same as core C0 state active state residency, the value is in 0..1)
+ IPC   : instructions per CPU cycle
+ CFREQ : core frequency in GHz
+ L3MISS: L3 (read) cache misses
+ L2MISS: L2 (read) cache misses (including other core's L2 cache *hits*)
+ L3HIT : L3 (read) cache hit ratio (0.00-1.00)
+ L2HIT : L2 cache hit ratio (0.00-1.00)
+ L3MPI : number of L3 (read) cache misses per instruction
+ L2MPI : number of L2 (read) cache misses per instruction
+ READ  : bytes read from main memory controller (in GBytes)
+ WRITE : bytes written to main memory controller (in GBytes)
+ TEMP  : Temperature reading in 1 degree Celsius relative to the TjMax temperature (thermal headroom): 0 corresponds to the max temperature
+ energy: Energy in Joules
+
+
+ Core (SKT) | UTIL | IPC  | CFREQ | L3MISS | L2MISS | L3HIT | L2HIT | L3MPI | L2MPI |  TEMP
+
+   0    0     0.80   0.17    3.52     245 M     50 M    0.07    0.50  0.0292  0.0060     47
+   1    0     0.86   0.19    3.54     308 M     61 M    0.03    0.53  0.0303  0.0060     47
+   2    0     0.96   0.35    3.63     568 M    116 M    0.07    0.60  0.0255  0.0052      1
+   3    0     0.80   0.16    3.54     245 M     49 M    0.03    0.50  0.0300  0.0061      1
+   4    0     0.89   0.23    3.57     372 M     80 M    0.05    0.56  0.0277  0.0060     52
+   5    0     0.79   0.17    3.55     243 M     48 M    0.03    0.50  0.0288  0.0057     52
+   6    0     0.87   0.19    3.56     324 M     71 M    0.04    0.53  0.0298  0.0066     34
+   7    0     0.80   0.16    3.56     245 M     49 M    0.03    0.50  0.0300  0.0061     34
+   8    0     0.80   0.20    3.08     265 M     23 M    0.07    0.39  0.0300  0.0027     50
+   9    0     0.80   0.20    3.08     264 M     23 M    0.07    0.39  0.0296  0.0026     50
+  10    0     0.80   0.20    3.08     268 M     23 M    0.06    0.40  0.0305  0.0027     50
+  11    0     0.80   0.20    3.08     261 M     23 M    0.06    0.39  0.0292  0.0026     50
+  12    0     0.81   0.20    3.08     270 M     23 M    0.06    0.38  0.0306  0.0027     54
+  13    0     0.82   0.20    3.09     277 M     24 M    0.06    0.38  0.0302  0.0026     54
+  14    0     0.82   0.21    3.09     284 M     24 M    0.06    0.39  0.0298  0.0026     54
+  15    0     0.82   0.20    3.09     281 M     24 M    0.06    0.38  0.0303  0.0026     54
+---------------------------------------------------------------------------------------------------------------
+ SKT    0     0.83   0.20    3.33    4728 M    719 M    0.05    0.51  0.0291  0.0044      1
+---------------------------------------------------------------------------------------------------------------
+ TOTAL  *     0.83   0.20    3.33    4728 M    719 M    0.05    0.51  0.0291  0.0044     N/A
+
+ Instructions retired:  162 G ; Active cycles:  797 G ; Time (TSC):   56 Gticks; SYS energy: 5.85 J;
+
+ Core C-state residencies: C0 (active,non-halted): 82.74 %; C1: 3.64 %; C3: 0.00 %; C6: 9.29 %; C7: 4.32 %;
+ Package C-state residencies:  C0: 100.00 %; C2: 0.00 %; C4: 0.00 %; C6: 0.00 %;
+                             ┌───────────────────────────────────────────────────────────────────────────────┐
+ Core    C-state distribution│0000000000000000000000000000000000000000000000000000000000000000001116666666777│
+                             └───────────────────────────────────────────────────────────────────────────────┘
+                             ┌────────────────────────────────────────────────────────────────────────────────┐
+ Package C-state distribution│00000000000000000000000000000000000000000000000000000000000000000000000000000000│
+                             └────────────────────────────────────────────────────────────────────────────────┘
+---------------------------------------------------------------------------------------------------------------
