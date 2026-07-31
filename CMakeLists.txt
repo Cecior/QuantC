@@ -14,6 +14,7 @@ add_executable(QuantC
         main.cu
         kernel_gpu.cu
         kernel_gpu.cuh
+        gpu_specs.cu
 )
 
 if(OpenMP_CXX_FOUND)
