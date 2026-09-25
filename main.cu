@@ -52,6 +52,8 @@ int main(int argc, char* argv[]) {
         if (std::string(argv[i]) == "--save") save = true;
     }
 
+    printf("Num qubits: %d\n", num_qubit);
+
     if (impl == "raw") cpuGate = &apply_H_raw;
     else if (impl == "omp") cpuGate = &apply_H_omp;
     else if (impl == "avx") cpuGate = &apply_H_AVX;
@@ -81,23 +83,7 @@ void save_result(const std::string &name_impl, int target, double time_ms) {
 
     file << name_impl << ", " << target << ", " << time_ms << std::endl;
 }
-double* aligned_state_vector(int nq) {
-    size_t n_elem = 1ULL << (nq + 1);
-    size_t size_in_bytes = n_elem * sizeof(double);
 
-    #ifdef _MSC_VER
-        double* data = static_cast<double*>(_aligned_malloc(size_in_bytes, 32));
-    #else
-        double* data = static_cast<double*>(aligned_alloc(32, size_in_bytes));
-    #endif
-
-    for (int i = 0; i < n_elem; i++) {
-        data[i] = 0.0;
-    }
-    data[0] = 1.0;
-
-    return data;
-}
 void benchmark_cpu(int num_qubit, int iter, CpuGateFunction gate, const std::string name, std::string str_target) {
     size_t num_states = 1ULL << num_qubit;
     size_t size = 2 * num_states;

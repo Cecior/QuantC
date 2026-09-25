@@ -1,34 +1,30 @@
-cmake_minimum_required(VERSION 4.2)
-project(QuantC LANGUAGES CXX CUDA)
+cmake_minimum_required(VERSION 3.2)
+project(QuantC LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+include_directories(${CMAKE_SOURCE_DIR}/include)
 
-include_directories(.)
+enable_language(CUDA)
+
 find_package(OpenMP REQUIRED)
 
-add_executable(QuantC
-        kernel_cpu.h
-        kernel_cpu.cpp
-        main.cu
-        kernel_gpu.cu
-        kernel_gpu.cuh
-        gpu_specs.cu
+include(FetchContent)
+FetchContent_Declare(
+    pybind11
+    GIT_REPOSITORY  https://www.github.com/pybind/pybind11.git
+    GIT_TAG         v2.11.1
 )
+FetchContent_MakeAvailable(pybind11)
 
-if(OpenMP_CXX_FOUND)
-    target_link_libraries(QuantC PUBLIC OpenMP::OpenMP_CXX)
-endif()
+add_library(backend_naive STATIC src/naive.cpp)
+target_compile_options(backend_naive PRIVATE -O3 -fno-tree-vectorize)
 
-if(MSVC)
-    target_compile_options(QuantC PRIVATE
-        $<$<COMPILE_LANGUAGE:CXX>: /O2 /arch:AVX2 /fp:fast /Zi>
-        $<$<COMPILE_LANGUAGE:CUDA>: -O3 --use_fast_math -lineinfo>
-    )
-else()
-    target_compile_options(QuantC PRIVATE
-        $<$<COMPILE_LANGUAGE:CXX>: -O3 -march=native -ffast-math -flto -mavx2 -g>
-        $<$<COMPILE_LANGUAGE:CUDA>: -O3 --use_fast_math -lineinfo>
-    )
-endif()
+add_library(backend_omp STATIC src/omp.cpp)
+target_compile_options(backend_omp PRIVATE -O3)
+target_link_libraries(backend_omp PRIVATE OpenMP::OpenMP_CXX)
+
+add_library(backend_avx STATIC src/avx.cpp)
+target_compile_options(backend_avx PRIVATE -O3 -march=native)
+
+add_library(backend_cuda STATIC src/cuda.cu)
+target_compile_options(backend_cuda PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-O3 -arch=sm_86>)

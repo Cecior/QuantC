@@ -1,16 +1,14 @@
-//
-// Created by cesare on 7/21/26.
-//
 
-#include "kernel_gpu.cuh"
 #include <device_launch_parameters.h>
 #include <cmath>
 
-__global__ void apply_X_kernel(double* data, size_t num_states, int target) {
+__global__ void apply_X_kernel(double *data, size_t num_states, int target)
+{
     size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= num_states / 2) return;
+    if (tid >= num_states / 2)
+        return;
 
-    double2* c_data = reinterpret_cast<double2*>(data);
+    double2 *c_data = reinterpret_cast<double2 *>(data);
 
     size_t stride = 1ULL << target;
     size_t block = tid / stride;
@@ -23,15 +21,18 @@ __global__ void apply_X_kernel(double* data, size_t num_states, int target) {
     c_data[idx1] = c_data[idx2];
     c_data[idx2] = temp;
 }
-void launch_apply_X(double *data, size_t num_states, int target, int blocks, int threads) {
+void launch_apply_X(double *data, size_t num_states, int target, int blocks, int threads)
+{
     apply_X_kernel<<<blocks, threads>>>(data, num_states, target);
 }
 
-__global__ void apply_Y_kernel(double* data, size_t num_states, int target) {
+__global__ void apply_Y_kernel(double *data, size_t num_states, int target)
+{
     size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= num_states / 2) return;
+    if (tid >= num_states / 2)
+        return;
 
-    double2* c_data = reinterpret_cast<double2*>(data);
+    double2 *c_data = reinterpret_cast<double2 *>(data);
 
     size_t stride = 1ULL << target;
     size_t block = tid / stride;
@@ -52,15 +53,18 @@ __global__ void apply_Y_kernel(double* data, size_t num_states, int target) {
     c_data[idx2].x = i1;
     c_data[idx2].y = -r1;
 }
-void launch_apply_Y(double *data, size_t num_states, int target, int blocks, int threads) {
+void launch_apply_Y(double *data, size_t num_states, int target, int blocks, int threads)
+{
     apply_Y_kernel<<<blocks, threads>>>(data, num_states, target);
 }
 
-__global__ void apply_Z_kernel(double* data, size_t num_states, int target) {
+__global__ void apply_Z_kernel(double *data, size_t num_states, int target)
+{
     size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= num_states / 2) return;
+    if (tid >= num_states / 2)
+        return;
 
-    double2* c_data = reinterpret_cast<double2*>(data);
+    double2 *c_data = reinterpret_cast<double2 *>(data);
 
     size_t stride = 1ULL << target;
     size_t block = tid / stride;
@@ -70,15 +74,18 @@ __global__ void apply_Z_kernel(double* data, size_t num_states, int target) {
     c_data[idx].x = -c_data[idx].x;
     c_data[idx].y = -c_data[idx].y;
 }
-void launch_apply_Z(double *data, size_t num_states, int target, int blocks, int threads) {
+void launch_apply_Z(double *data, size_t num_states, int target, int blocks, int threads)
+{
     apply_Z_kernel<<<blocks, threads>>>(data, num_states, target);
 }
 
-__global__ void apply_H_kernel(double* data, size_t num_states, int target) {
+__global__ void apply_H_kernel(double *data, size_t num_states, int target)
+{
     size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= num_states / 2) return;
+    if (tid >= num_states / 2)
+        return;
 
-    double2* c_data = reinterpret_cast<double2*>(data);
+    double2 *c_data = reinterpret_cast<double2 *>(data);
 
     size_t stride = 1ULL << target;
     size_t block = tid / stride;
@@ -95,28 +102,31 @@ __global__ void apply_H_kernel(double* data, size_t num_states, int target) {
     c_data[idx2].x = (val1.x - val2.x) * M_SQRT1_2;
     c_data[idx2].y = (val1.y - val2.y) * M_SQRT1_2;
 }
-void launch_apply_H(double *data, size_t num_states, int target, int blocks, int threads) {
+void launch_apply_H(double *data, size_t num_states, int target, int blocks, int threads)
+{
     apply_H_kernel<<<blocks, threads>>>(data, num_states, target);
 }
 
-__global__ void apply_CX_kernel(double* data, size_t num_states, int control, int target) {
+__global__ void apply_CX_kernel(double *data, size_t num_states, int control, int target)
+{
     size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (tid >= num_states / 4) return;
+    if (tid >= num_states / 4)
+        return;
 
-    double2* c_data = reinterpret_cast<double2*>(data);
+    double2 *c_data = reinterpret_cast<double2 *>(data);
 
     size_t stride_tg = 1ULL << target;
     size_t stride_ctl = 1ULL << control;
 
-    size_t max = max(stride_tg, stride_ctl);
-    size_t min = min(stride_tg, stride_ctl);
+    size_t max_v = max(stride_tg, stride_ctl);
+    size_t min_v = min(stride_tg, stride_ctl);
 
-    size_t high = tid / max;
-    size_t med = (tid % max) / min;
-    size_t low = tid % min;
+    size_t high = tid / max_v;
+    size_t med = (tid % max_v) / min_v;
+    size_t low = tid % min_v;
 
-    size_t idx1 = (high * max * 4) + (med * min * 2) + low + stride_ctl;
+    size_t idx1 = (high * max_v * 4) + (med * min_v * 2) + low + stride_ctl;
     size_t idx2 = idx1 + stride_tg;
 
     double2 temp = c_data[idx1];
