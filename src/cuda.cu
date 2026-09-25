@@ -47,11 +47,11 @@ __global__ void apply_Y_kernel(double *data, size_t num_states, int target)
     double r2 = c_data[idx2].x;
     double i2 = c_data[idx2].y;
 
-    c_data[idx1].x = -i2;
-    c_data[idx1].y = r2;
+    c_data[idx1].x = i2;
+    c_data[idx1].y = -r2;
 
-    c_data[idx2].x = i1;
-    c_data[idx2].y = -r1;
+    c_data[idx2].x = -i1;
+    c_data[idx2].y = r1;
 }
 void launch_apply_Y(double *data, size_t num_states, int target, int blocks, int threads)
 {

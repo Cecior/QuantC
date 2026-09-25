@@ -57,11 +57,15 @@ void apply_Y_AVX(double *data, size_t size, int target)
                 size_t idx1 = block | offset;
                 size_t idx2 = idx1 | stride;
 
-                data[idx1] = -data[idx2 + 1];
-                data[idx1 + 1] = data[idx2];
+                double r1 = data[idx1];
+                double i1 = data[idx1 + 1];
+                double r2 = data[idx2];
+                double i2 = data[idx2 + 1];
 
-                data[idx2] = data[idx1 + 1];
-                data[idx2 + 1] = data[idx1];
+                data[idx1] = i2;
+                data[idx1 + 1] = -r2;
+                data[idx2] = -i1;
+                data[idx2 + 1] = r1;
             }
         }
         return;
@@ -109,6 +113,7 @@ void apply_Z_AVX(double *data, size_t size, int target)
                 data[idx + 1] = -data[idx + 1];
             }
         }
+        return;
     }
 
     __m256d neg_ones = _mm256_set1_pd(-1.0);
@@ -176,6 +181,53 @@ void apply_H_AVX(double *data, size_t size, int target)
 
             _mm256_stream_pd(&data[idx1], vec1);
             _mm256_stream_pd(&data[idx2], vec2);
+        }
+    }
+}
+
+void apply_CX_avx(double *data, size_t size, int control, int target)
+{
+    size_t stride_tg = 1ULL << (target + 1);
+    size_t stride_ctl = 1ULL << (control + 1);
+
+    size_t max_v = std::max(stride_tg, stride_ctl);
+    size_t min_v = std::min(stride_tg, stride_ctl);
+
+    if (min_v < 4)
+    {
+#pragma omp parallel for schedule(static)
+        for (int64_t high = 0; high < size; high += 2 * max_v)
+        {
+            for (size_t mid = 0; mid < max_v; mid += 2 * min_v)
+            {
+                for (size_t low = 0; low < min_v; low += 2)
+                {
+                    size_t idx1 = high | mid | low | stride_ctl;
+                    size_t idx2 = idx1 | stride_tg;
+
+                    std::swap(data[idx1], data[idx2]);
+                    std::swap(data[idx1 + 1], data[idx2 + 1]);
+                }
+            }
+        }
+        return;
+    }
+
+    for (size_t high = 0; high < size; high += 2 * max_v)
+    {
+        for (size_t mid = 0; mid < max_v; mid += 2 * min_v)
+        {
+            for (size_t low = 0; low < min_v; low += 2)
+            {
+                size_t idx1 = high | mid | low | stride_ctl;
+                size_t idx2 = idx1 | stride_tg;
+
+                __m256d vec1 = _mm256_load_pd(&data[idx1]);
+                __m256d vec2 = _mm256_load_pd(&data[idx2]);
+
+                _mm256_stream_pd(&data[idx1], vec2);
+                _mm256_stream_pd(&data[idx2], vec1);
+            }
         }
     }
 }

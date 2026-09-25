@@ -34,7 +34,7 @@ double run_simulation(const std::string &impl, const std::string &gate,
     }
 }
 
-PYBIND_MODULE(qsim_core, m)
+PYBIND11_MODULE(qsim_core, m)
 {
     m.doc() = "C++ core of the quantum simulator";
 
