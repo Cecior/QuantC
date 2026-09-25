@@ -5,7 +5,7 @@
 
 const double sq12 = qsim::sqrt1_2;
 
-void apply_X_raw(double *data, size_t size, int target)
+void apply_X_omp(double *data, size_t size, int target)
 {
     size_t stride = 1ULL << (target + 1);
 
@@ -23,7 +23,7 @@ void apply_X_raw(double *data, size_t size, int target)
     }
 }
 
-void apply_Y_raw(double *data, size_t size, int target)
+void apply_Y_omp(double *data, size_t size, int target)
 {
     size_t stride = 1ULL << (target + 1);
 
@@ -48,7 +48,7 @@ void apply_Y_raw(double *data, size_t size, int target)
     }
 }
 
-void apply_Z_raw(double *data, size_t size, int target)
+void apply_Z_omp(double *data, size_t size, int target)
 {
     size_t stride = 1ULL << (target + 1);
 
@@ -93,7 +93,7 @@ void apply_H_omp(double *data, size_t size, int target)
     }
 }
 
-void apply_CX_raw(double *data, size_t size, int control, int target)
+void apply_CX_omp(double *data, size_t size, int control, int target)
 {
     size_t stride_tg = 1ULL << (target + 1);
     size_t stride_ctl = 1ULL << (control + 1);

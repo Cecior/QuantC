@@ -5,7 +5,7 @@
 
 const double sq12 = qsim::sqrt1_2;
 
-void apply_X_AVX(double *data, size_t size, int target)
+void apply_X_avx(double *data, size_t size, int target)
 {
     size_t stride = 1ULL << (target + 1);
 
@@ -43,7 +43,7 @@ void apply_X_AVX(double *data, size_t size, int target)
         }
     }
 }
-void apply_Y_AVX(double *data, size_t size, int target)
+void apply_Y_avx(double *data, size_t size, int target)
 {
     size_t stride = 1ULL << (target + 1);
 
@@ -88,15 +88,15 @@ void apply_Y_AVX(double *data, size_t size, int target)
             __m256d perm1 = _mm256_permute_pd(vec1, 0x5);
             __m256d perm2 = _mm256_permute_pd(vec2, 0x5);
 
-            __m256d out1 = _mm256_mul_pd(perm1, sign_V1);
-            __m256d out2 = _mm256_mul_pd(perm2, sign_V2);
+            __m256d out1 = _mm256_mul_pd(perm2, sign_V2);
+            __m256d out2 = _mm256_mul_pd(perm1, sign_V1);
 
             _mm256_stream_pd(&data[idx1], out1);
             _mm256_stream_pd(&data[idx2], out2);
         }
     }
 }
-void apply_Z_AVX(double *data, size_t size, int target)
+void apply_Z_avx(double *data, size_t size, int target)
 {
     size_t stride = 1ULL << (target + 1);
 
@@ -132,7 +132,7 @@ void apply_Z_AVX(double *data, size_t size, int target)
     }
 }
 
-void apply_H_AVX(double *data, size_t size, int target)
+void apply_H_avx(double *data, size_t size, int target)
 {
     size_t stride = 1ULL << (target + 1);
 
@@ -217,7 +217,7 @@ void apply_CX_avx(double *data, size_t size, int control, int target)
     {
         for (size_t mid = 0; mid < max_v; mid += 2 * min_v)
         {
-            for (size_t low = 0; low < min_v; low += 2)
+            for (size_t low = 0; low < min_v; low += 4)
             {
                 size_t idx1 = high | mid | low | stride_ctl;
                 size_t idx2 = idx1 | stride_tg;
